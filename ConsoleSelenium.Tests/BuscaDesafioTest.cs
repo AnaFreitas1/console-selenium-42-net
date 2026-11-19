@@ -2,7 +2,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
-using SeleniumExtras.WaitHelpers;
 
 namespace ConsoleSelenium.Tests;
 
@@ -35,7 +34,12 @@ public class BuscaDesafioTest
     {
         _driver.Navigate().GoToUrl(BaseUrl);
 
-        var campoBusca = _wait.Until(ExpectedConditions.ElementToBeClickable(By.Name("q")));
+        var campoBusca = _wait.Until(d =>
+        {
+            var el = d.FindElement(By.Name("q"));
+            return el.Displayed && el.Enabled ? el : null;
+        })!;
+
         campoBusca.SendKeys("Selenium WebDriver C#" + Keys.Enter);
 
         _wait.Until(d =>
@@ -56,24 +60,29 @@ public class BuscaDesafioTest
     {
         _driver.Navigate().GoToUrl(BaseUrl);
 
-        var campoBusca = _wait.Until(ExpectedConditions.ElementToBeClickable(By.Name("q")));
+        var campoBusca = _wait.Until(d =>
+        {
+            var el = d.FindElement(By.Name("q"));
+            return el.Displayed && el.Enabled ? el : null;
+        })!;
+
         campoBusca.SendKeys("C# unit testing");
 
         By seletorSugestoes = By.CssSelector(".search-suggestions-list li, .sbox-suggestions li, [role='option']");
 
-        var sugestoes = _wait.Until(driver =>
+        var sugestoes = _wait.Until(d =>
         {
-            var itens = driver.FindElements(seletorSugestoes)
-                              .Where(el => el.Displayed && !string.IsNullOrWhiteSpace(el.Text))
-                              .ToList();
+            var itens = d.FindElements(seletorSugestoes)
+                         .Where(el => el.Displayed && !string.IsNullOrWhiteSpace(el.Text))
+                         .ToList();
             return itens.Count >= 3 ? itens : null;
         });
 
         sugestoes![2].Click();
 
-        _wait.Until(driver =>
-            driver.Url.Contains("q=", StringComparison.OrdinalIgnoreCase) ||
-            driver.Title.Contains("DuckDuckGo", StringComparison.OrdinalIgnoreCase));
+        _wait.Until(d =>
+            d.Url.Contains("q=", StringComparison.OrdinalIgnoreCase) ||
+            d.Title.Contains("DuckDuckGo", StringComparison.OrdinalIgnoreCase));
 
         Assert.IsTrue(
             _driver.Url.Contains("unit", StringComparison.OrdinalIgnoreCase) ||
@@ -87,32 +96,37 @@ public class BuscaDesafioTest
     {
         _driver.Navigate().GoToUrl(BaseUrl);
 
-        var campoBusca = _wait.Until(ExpectedConditions.ElementToBeClickable(By.Name("q")));
-        campoBusca.SendKeys("Automated Testing" + Keys.Enter);
-
-        string urlResultados = _wait.Until(driver =>
+        var campoBusca = _wait.Until(d =>
         {
-            var links = driver.FindElements(By.CssSelector("article h2 a, a[data-testid='result-title-a']"));
-            return links.Any(l => l.Displayed) ? driver.Url : null;
+            var el = d.FindElement(By.Name("q"));
+            return el.Displayed && el.Enabled ? el : null;
         })!;
 
-        var primeiroLink = _wait.Until(driver =>
-            driver.FindElements(By.CssSelector("article h2 a, a[data-testid='result-title-a']"))
-                  .FirstOrDefault(l => l.Displayed && !string.IsNullOrWhiteSpace(l.GetAttribute("href")))
+        campoBusca.SendKeys("Automated Testing" + Keys.Enter);
+
+        string urlResultados = _wait.Until(d =>
+        {
+            var links = d.FindElements(By.CssSelector("article h2 a, a[data-testid='result-title-a']"));
+            return links.Any(l => l.Displayed) ? d.Url : null;
+        })!;
+
+        var primeiroLink = _wait.Until(d =>
+            d.FindElements(By.CssSelector("article h2 a, a[data-testid='result-title-a']"))
+             .FirstOrDefault(l => l.Displayed && !string.IsNullOrWhiteSpace(l.GetAttribute("href")))
         );
 
         Assert.IsNotNull(primeiroLink, "Nenhum link orgânico foi encontrado na página de resultados.");
         primeiroLink.Click();
 
-        _wait.Until(driver => driver.Url != urlResultados);
+        _wait.Until(d => d.Url != urlResultados);
         string urlPaginaExterna = _driver.Url;
         Assert.AreNotEqual(urlResultados, urlPaginaExterna, "A URL deveria ter mudado após clicar no resultado.");
 
         _driver.Navigate().Back();
 
-        _wait.Until(driver =>
-            driver.Url.Contains("Automated", StringComparison.OrdinalIgnoreCase) ||
-            driver.FindElements(By.Name("q")).Any(e => e.Displayed));
+        _wait.Until(d =>
+            d.Url.Contains("Automated", StringComparison.OrdinalIgnoreCase) ||
+            d.FindElements(By.Name("q")).Any(e => e.Displayed));
 
         Assert.IsTrue(
             _driver.Url.Contains("Automated", StringComparison.OrdinalIgnoreCase) ||
